@@ -11,7 +11,7 @@ fare	티켓요금
 cabin	객실번호
 embarked	승선한 항구명  C = 쉐브로, Q = 퀸즈타운, S = 사우스햄튼
 
-데이터프레임에 들어가있는 변수명으로 코딩에 활용해야 함(str이므로 변수명 인식에 대소문자 구분)
+데이터프레임에 들어가있는 변수명(이하의 Index 안에 으로 코딩에 활용해야 함(str이므로 변수명 인식에 대소문자 구분)
 Index(['PassengerId', 'Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp',
        'Parch', 'Ticket', 'Fare', 'Cabin', 'Embarked'],
       dtype='object')
@@ -87,7 +87,32 @@ class TitanicModel:
         t = self.embarked_nominal(t[0], t[1])
         print('----------------3. Title 편집--------------------------')
         t = self.title_norminal(t[0], t[1])
+        print('----------------4. Name, PassengerId 삭제-------------------------')
+        t = self.drop_feature(t[0], t[1], 'Name')
+        self._test_id = test['PassengerId']
+        # test에서 활용하기 위해 PassengerID를 test_id에 저장해두고 train-test용 데이터에서는 삭제함
+        t = self.drop_feature(t[0], t[1], 'PassengerId')
+        print('----------------5. Age ordinal 편집--------------------------')
+        t = self.age_ordinal(t[0], t[1])
+        print('----------------6. Fare ordinal 편집--------------------------')
+        t = self.fare_ordinal(t[0], t[1])
+        print('----------------7. Fare 삭제 -------------------------')
+        t = self.drop_feature(t[0], t[1], 'Fare')
+        print('----------------8. Sex norminal 편집 -------------------------')
+        t = self.sex_norminal(t[0], t[1])
+        t[1] = t[1].fillna({"FareBand": 1})
+        # 결손치 (공백값) 체크 구문
+        a = self.null_sum(t[1])
+        print('null 수량 {} 개'.format(a))
+        self._test = t[1]
         return t[0]
+
+    @staticmethod
+    def null_sum(train) -> int:
+        return train.isnull().sum()
+     #   sum = train.isnull().sum()
+     #   return sum
+
 
     @staticmethod
     def drop_feature(train, test, feature) -> []:
@@ -141,5 +166,50 @@ class TitanicModel:
         for dataset in combine:
             dataset['Title'] = dataset['Title'].map(title_mapping)
             dataset['Title'] = dataset['Title'].fillna(0)
+        return [train, test]
+
+
+    @staticmethod
+    def sex_norminal(train, test) -> []:
+        combine = [train, test]
+        sex_mapping = {'male':0, 'female':1}
+        for dataset in combine:
+            dataset['Sex'] = dataset['Sex'].map(sex_mapping)
+
+        return [train, test]
+
+    @staticmethod
+    def age_ordinal(train, test) -> []:
+        train['Age'] = train['Age'].fillna(-0.5)
+        test['Age'] = test['Age'].fillna(-0.5)
+        # -0.5로 지정한 이유는 이하의 -1과 0의 사이구간에 unknown값을 할당하기 위함
+        bins = [-1, 0, 5, 12, 18, 24, 35, 60, np.inf]
+        # 구간 지정을 위한 구문
+        labels = ['Unknown', 'Baby', 'Child', 'Teenager', 'Student', 'Young Adult', 'Adult', 'Senior']
+        train['AgeGroup'] = pd.cut(train['Age'], bins, labels=labels)
+        test['AgeGroup'] = pd.cut(test['Age'], bins, labels=labels)
+
+        age_title_mapping = {0: 'Unknown', 1: 'Baby', 2: 'Child', 3: 'Teenager',
+                             4: 'Student', 5: 'Young Adult', 6: 'Adult', 7: 'Senior'}
+        for x in range(len(train['AgeGroup'])):
+            if train['AgeGroup'][x] == 'Unknown':
+                train['AgeGroup'][x] = age_title_mapping[train['Title'][x]]
+        for x in range(len(test['AgeGroup'])):
+            if test['AgeGroup'][x] == 'Unknown':
+                test['AgeGroup'][x] = age_title_mapping[test['Title'][x]]
+
+        age_mapping = {'Unknown':0, 'Baby':1, 'Child':2, 'Teenager':3,
+                             'Student':4, 'Young Adult':5, 'Adult':6, 'Senior':7}
+
+        train['AgeGroup'] = train['AgeGroup'] .map(age_mapping)
+        test['AgeGroup'] = test['AgeGroup'].map(age_mapping)
+        print(train['AgeGroup'].head())
+        return [train, test]
+
+    @staticmethod
+    def fare_ordinal(train, test) -> []:
+        train['FareBand'] = pd.qcut(train['Fare'], 4, labels={1,2,3,4})
+        test['FareBand'] = pd.qcut(test['Fare'], 4, labels={1, 2, 3, 4})
+        # 엄밀하게 구분하지 않아도 될 경우 qcut을 사용하면 4군으로 분류
         return [train, test]
 
