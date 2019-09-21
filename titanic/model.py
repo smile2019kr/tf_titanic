@@ -20,6 +20,16 @@ Index(['PassengerId', 'Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp',
 
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn import metrics
+
 
 
 class TitanicModel:
@@ -212,4 +222,69 @@ class TitanicModel:
         test['FareBand'] = pd.qcut(test['Fare'], 4, labels={1, 2, 3, 4})
         # 엄밀하게 구분하지 않아도 될 경우 qcut을 사용하면 4군으로 분류
         return [train, test]
+
+    #검증 알고리즘 작성 (2019.9.20 수업에서 추가)
+
+    def hook_test(self, model, dummy):
+        print('KNN 활용한 검증 정확도 {} %'.format(self.accuracy_by_knn(model, dummy)))
+        print('결정트리 활용한 검증 정확도 {} %'.format(self.accuracy_by_dtree(model, dummy)))
+        print('랜덤포레스트 활용한 검증 정확도 {} %'.format(self.accuracy_by_rforest(model, dummy)))
+        print('나이브베이즈 활용한 검증 정확도 {} %'.format(self.accuracy_by_nb(model, dummy)))
+        print('SVM 활용한 검증 정확도 {} %'.format(self.accuracy_by_svm(model, dummy)))
+
+    @staticmethod
+    def create_k_fold():
+        k_fold = KFold(n_splits=10, shuffle=True, random_state=0)
+        return k_fold
+    # KFold와 randomvariables로 데이터 더미를 잔뜩 만들어두기 위한 코딩
+    @staticmethod
+    def create_random_variables(train, X_feature, Y_features) -> []:
+        the_X_feature = X_feature
+        the_Y_feature = Y_features
+        train2, test2 = train_test_split(train, test_size=0.3, random_state=0)
+        train_X = train2[the_X_feature]
+        train_Y = train2[the_Y_feature]
+        test_X = test2[the_X_feature]
+        test_Y = test2[the_Y_feature]
+        return [train_X, train_Y, test_X, test_Y]
+
+    def accuracy_by_knn(self, model, dummy):
+        clf = KNeighborsClassifier(n_neighbors=13)
+        scoring = 'accuracy'
+        k_fold = self.create_k_fold()
+        score = cross_val_score(clf, model, dummy, cv=k_fold, n_jobs=1, scoring=scoring)
+        accuracy = round(np.mean(score) * 100, 2) # 소수점 2번째자리에서 자름
+        return accuracy
+
+    def accuracy_by_dtree(self, model, dummy):
+        clf = DecisionTreeClassifier()
+        scoring = 'accuracy'
+        k_fold = self.create_k_fold()
+        score = cross_val_score(clf, model, dummy, cv=k_fold, n_jobs=1, scoring=scoring)
+        accuracy = round(np.mean(score) * 100, 2)  # 소수점 2번째자리에서 자름
+        return accuracy
+
+    def accuracy_by_rforest(self, model, dummy):
+        clf = RandomForestClassifier(n_estimators=13)
+        scoring = 'accuracy'
+        k_fold = self.create_k_fold()
+        score = cross_val_score(clf, model, dummy, cv=k_fold, n_jobs=1, scoring=scoring)
+        accuracy = round(np.mean(score) * 100, 2)  # 소수점 2번째자리에서 자름
+        return accuracy
+
+    def accuracy_by_nb(self, model, dummy):
+        clf = GaussianNB()
+        scoring = 'accuracy'
+        k_fold = self.create_k_fold()
+        score = cross_val_score(clf, model, dummy, cv=k_fold, n_jobs=1, scoring=scoring)
+        accuracy = round(np.mean(score) * 100, 2)  # 소수점 2번째자리에서 자름
+        return accuracy
+
+    def accuracy_by_svm(self, model, dummy):
+        clf = SVC()
+        scoring = 'accuracy'
+        k_fold = self.create_k_fold()
+        score = cross_val_score(clf, model, dummy, cv=k_fold, n_jobs=1, scoring=scoring)
+        accuracy = round(np.mean(score) * 100, 2)  # 소수점 2번째자리에서 자름
+        return accuracy
 
