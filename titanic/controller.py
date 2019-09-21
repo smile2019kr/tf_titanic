@@ -60,7 +60,7 @@ class TitanicController:
         m = self._m
         model = self.create_model()
         dummy = self.create_dummy()
-        test = m.test
+        test = m._test
         test_id = m.test_id
 
         clf = SVC()
